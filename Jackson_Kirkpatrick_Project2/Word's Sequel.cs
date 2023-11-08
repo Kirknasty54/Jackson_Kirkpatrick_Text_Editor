@@ -27,8 +27,7 @@ namespace Jackson_Kirkpatrick_Project2 {
         private string currFile = string.Empty;
         private OpenFileDialog ofd = new OpenFileDialog();
         private SaveFileDialog sfd = new SaveFileDialog();
-        private Stack<string> undoStack = new Stack<string>();
-        private Stack<string> redoStack = new Stack<string>();
+        private UndoRedo unreStack = new UndoRedo();
         private Dictionary<FontStyle, bool> styleEnabled = new Dictionary<FontStyle, bool> {
             {FontStyle.Bold, false},
             {FontStyle.Italic, false},
@@ -161,27 +160,32 @@ namespace Jackson_Kirkpatrick_Project2 {
         }
 
         private void textBody_TextChanged(object sender, EventArgs e) {
+            string[] textBodyArray = textBody.Text.Split(' ');
+            foreach(string word in textBodyArray) {
+                unreStack.AddItem(word);
+            }
         }
 
         private void textBody_KeyDown(object sender, KeyEventArgs e) {
             if (e.Control && e.KeyCode == Keys.Z) {
-                // Undo operation
-                if (undoStack.Count > 0) {
-                    redoStack.Push(textBody.Text);
-                    textBody.Text = undoStack.Pop();
+                e.SuppressKeyPress = true;
+                if(unreStack.CanUndo()){
+                    int selStart = textBody.SelectionStart;
+                    textBody.Text = unreStack.Undo();
+                    textBody.SelectionStart = Math.Min(selStart, textBody.Text.Length);
                 }
-            }
-            else if (e.Control && e.KeyCode == Keys.Y) {
-                // Redo operation
-                if (redoStack.Count > 0) {
-                    undoStack.Push(textBody.Text);
-                    textBody.Text = redoStack.Pop();
+            }else if(e.Control && e.KeyCode == Keys.Y) {
+                e.SuppressKeyPress = true;
+                if(unreStack.CanRedo()){
+                    int selStart = textBody.SelectionStart;
+                    textBody.Text = unreStack.Redo();
+                    textBody.SelectionStart = Math.Min(selStart, textBody.Text.Length);
                 }
             }
             else {
-                // Regular text input - store the current state for undo
-                undoStack.Push(textBody.Text);
-                redoStack.Clear(); // Clear redo stack as a new change invalidates redo.
+                string[] currText = textBody.Text.Split(' ');
+                textBody.Redo();
+                foreach(string word in currText){unreStack.AddItem(word);}
             }
         }
     }
