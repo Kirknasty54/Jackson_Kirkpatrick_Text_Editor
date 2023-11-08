@@ -8,19 +8,32 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.IO;
+using System.Diagnostics.Eventing.Reader;
 
 namespace Jackson_Kirkpatrick_Project2 {
     public partial class Form1 : Form {
         public Form1() {
             InitializeComponent();
+            
+            //get list of available fonts on the system and then add them to the combobox currFontText. also set the text in the combo box to the default t
+            string[] fontNames = System.Drawing.FontFamily.Families.Select(family => family.Name).ToArray(); 
+            currFontText.Items.AddRange(fontNames);
+            currFontText.Text = textBody.SelectionFont.Name;
         }
 
         //if the current file is save
         private bool saved = false;
         //name of current opened file 
         private string currFile = string.Empty;
-        OpenFileDialog ofd = new OpenFileDialog();
-        SaveFileDialog sfd = new SaveFileDialog();
+        private OpenFileDialog ofd = new OpenFileDialog();
+        private SaveFileDialog sfd = new SaveFileDialog();
+        private Stack<string> undoStack = new Stack<string>();
+        private Stack<string> redoStack = new Stack<string>();
+        private Dictionary<FontStyle, bool> styleEnabled = new Dictionary<FontStyle, bool> {
+            {FontStyle.Bold, false},
+            {FontStyle.Italic, false},
+            {FontStyle.Underline, false}
+        };
 
         private void newToolStripMenuItem1_Click(object sender, EventArgs e) {
             //if the textbody has text entered ask user if okay with losing contents since they will be opening a new file 
@@ -65,9 +78,13 @@ namespace Jackson_Kirkpatrick_Project2 {
 
         private void saveAsToolStripMenuItem1_Click(object sender, EventArgs e) {
             if(currFile == "")
-                sfd.FileName = "Untitled";
+                sfd.FileName = "Untitled.txt";
+            
 
-            if(DialogResult.OK == sfd.ShowDialog()) {
+            sfd.Filter = "Text Files (*.txt)|*.txt|PDF Files (*.pdf)|*.pdf|Word Documents (*.docx)|*.docx|All Files (*.*)|*.*";
+            sfd.FilterIndex = 1;
+
+            if (DialogResult.OK == sfd.ShowDialog()) {
                 if(Path.GetExtension(sfd.FileName)== ".txt")
                     textBody.SaveFile(sfd.FileName, RichTextBoxStreamType.PlainText);
                 currFile = sfd.FileName;
@@ -91,32 +108,81 @@ namespace Jackson_Kirkpatrick_Project2 {
         }
 
         private void boldBtn_Click(object sender, EventArgs e) {
-            int selStart = textBody.SelectionStart;
-            int selLength = textBody.SelectionLength;
-
-            textBody.SelectionFont = new Font(textBody.Font, FontStyle.Bold);
-            
-            textBody.SelectionStart = textBody.SelectionStart + textBody.SelectionLength;
-            textBody.SelectionLength = 0;
-
-            textBody.SelectionFont = textBody.Font;
-            textBody.Select(selStart, selLength);
+            changeFont(FontStyle.Bold);
         }
 
         private void italicBtn_Click(object sender, EventArgs e) {
-
+            changeFont(FontStyle.Italic);
         }
 
         private void underlineBtn_Click(object sender, EventArgs e) {
-
+            changeFont(FontStyle.Underline);
         }
 
         private void increaseSizeBtn_Click(object sender, EventArgs e) {
-
+            changeFontSize(1.0f);
         }
 
         private void decreseSizeBtn_Click(object sender, EventArgs e) {
+            changeFontSize(-1.0f);
+        }
 
+
+        private void changeFont(FontStyle fontStyle) {
+            styleEnabled[fontStyle] = !styleEnabled[fontStyle];
+            Font currfont = textBody.SelectionFont;
+            if (styleEnabled[fontStyle]) 
+                textBody.SelectionFont = new Font(currfont, currfont.Style | fontStyle);
+            else
+                textBody.SelectionFont = new Font(currfont, currfont.Style & ~fontStyle);
+        }
+        private void changeFontSize(float val) {
+            if(textBody.SelectionFont != null) {
+                float newSize = textBody.SelectionFont.Size + val;
+                if(newSize <= 12){
+                    MessageBox.Show("Minmum font size is 12.\nAny lower and this program will literally implode.\nAnd federal agents will be sent to your house.", "Warning", MessageBoxButtons.OK);
+                    newSize = 12.0f;
+                }else if(newSize >= 100) {
+                    MessageBox.Show("Maximum font size is 100.\nAny larger and this program will literally implode.\nAnd federal agents will be sent to your house.", "Warning", MessageBoxButtons.OK);
+                    newSize = 12.0f;
+
+                }
+                textBody.SelectionFont = new Font(textBody.SelectionFont.FontFamily, newSize, textBody.SelectionFont.Style);
+            }
+        }
+
+        private void currFontText_SelectedIndexChanged(object sender, EventArgs e) {
+            string selectedFont = currFontText.SelectedItem.ToString();
+            Font newFont = new Font(selectedFont, 12);
+            int selStart = textBody.SelectionStart;
+            int selLength = textBody.SelectionLength;
+            textBody.SelectionFont = newFont;
+            textBody.Select(selStart, selLength);
+        }
+
+        private void textBody_TextChanged(object sender, EventArgs e) {
+        }
+
+        private void textBody_KeyDown(object sender, KeyEventArgs e) {
+            if (e.Control && e.KeyCode == Keys.Z) {
+                // Undo operation
+                if (undoStack.Count > 0) {
+                    redoStack.Push(textBody.Text);
+                    textBody.Text = undoStack.Pop();
+                }
+            }
+            else if (e.Control && e.KeyCode == Keys.Y) {
+                // Redo operation
+                if (redoStack.Count > 0) {
+                    undoStack.Push(textBody.Text);
+                    textBody.Text = redoStack.Pop();
+                }
+            }
+            else {
+                // Regular text input - store the current state for undo
+                undoStack.Push(textBody.Text);
+                redoStack.Clear(); // Clear redo stack as a new change invalidates redo.
+            }
         }
     }
 }
