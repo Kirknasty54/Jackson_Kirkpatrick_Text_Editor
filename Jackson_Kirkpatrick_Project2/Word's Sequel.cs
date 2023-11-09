@@ -9,12 +9,11 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.IO;
 using System.Diagnostics.Eventing.Reader;
-
 namespace Jackson_Kirkpatrick_Project2 {
-    public partial class Form1 : Form {
+    
+    public partial class Form1 : Form{
         public Form1() {
             InitializeComponent();
-            
             //get list of available fonts on the system and then add them to the combobox currFontText. also set the text in the combo box to the default t
             string[] fontNames = System.Drawing.FontFamily.Families.Select(family => family.Name).ToArray(); 
             currFontText.Items.AddRange(fontNames);
@@ -27,7 +26,7 @@ namespace Jackson_Kirkpatrick_Project2 {
         private string currFile = string.Empty;
         private OpenFileDialog ofd = new OpenFileDialog();
         private SaveFileDialog sfd = new SaveFileDialog();
-        private UndoRedo unreStack = new UndoRedo();
+        //private Stack<string> undoStack = new Stack<string>();
         private Dictionary<FontStyle, bool> styleEnabled = new Dictionary<FontStyle, bool> {
             {FontStyle.Bold, false},
             {FontStyle.Italic, false},
@@ -141,9 +140,9 @@ namespace Jackson_Kirkpatrick_Project2 {
                 if(newSize <= 12){
                     MessageBox.Show("Minmum font size is 12.\nAny lower and this program will literally implode.\nAnd federal agents will be sent to your house.", "Warning", MessageBoxButtons.OK);
                     newSize = 12.0f;
-                }else if(newSize >= 100) {
+                }else if(newSize <= 100) {
                     MessageBox.Show("Maximum font size is 100.\nAny larger and this program will literally implode.\nAnd federal agents will be sent to your house.", "Warning", MessageBoxButtons.OK);
-                    newSize = 12.0f;
+                    newSize = 100.0f;
 
                 }
                 textBody.SelectionFont = new Font(textBody.SelectionFont.FontFamily, newSize, textBody.SelectionFont.Style);
@@ -160,33 +159,23 @@ namespace Jackson_Kirkpatrick_Project2 {
         }
 
         private void textBody_TextChanged(object sender, EventArgs e) {
-            string[] textBodyArray = textBody.Text.Split(' ');
-            foreach(string word in textBodyArray) {
-                unreStack.AddItem(word);
-            }
         }
 
-        private void textBody_KeyDown(object sender, KeyEventArgs e) {
-            if (e.Control && e.KeyCode == Keys.Z) {
-                e.SuppressKeyPress = true;
-                if(unreStack.CanUndo()){
-                    int selStart = textBody.SelectionStart;
-                    textBody.Text = unreStack.Undo();
-                    textBody.SelectionStart = Math.Min(selStart, textBody.Text.Length);
-                }
-            }else if(e.Control && e.KeyCode == Keys.Y) {
-                e.SuppressKeyPress = true;
-                if(unreStack.CanRedo()){
-                    int selStart = textBody.SelectionStart;
-                    textBody.Text = unreStack.Redo();
-                    textBody.SelectionStart = Math.Min(selStart, textBody.Text.Length);
-                }
-            }
-            else {
-                string[] currText = textBody.Text.Split(' ');
-                textBody.Redo();
-                foreach(string word in currText){unreStack.AddItem(word);}
-            }
+        private void undoToolStripMenuItem_Click(object sender, EventArgs e) {
         }
+
+        private void redoToolStripMenuItem_Click(object sender, EventArgs e) {
+
+        }
+
+        private void copyToolStripMenuItem_Click(object sender, EventArgs e) {
+
+        }
+
+        private void pasteToolStripMenuItem_Click(object sender, EventArgs e) {
+
+        }
+
+
     }
 }
