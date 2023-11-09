@@ -17,7 +17,7 @@ namespace Jackson_Kirkpatrick_Project2 {
         public Form1() {
             InitializeComponent();
             
-            //get list of available fonts on the system and then add them to the combobox currFontText. also set the text in the combo box to the default t
+            //get list of available fonts on the system and then add them to the combobox currFontText. also set the text in the combo box to the default font
             string[] fontNames = System.Drawing.FontFamily.Families.Select(family => family.Name).ToArray(); 
             currFontText.Items.AddRange(fontNames);
             currFontText.Text = textBody.SelectionFont.Name;
@@ -31,6 +31,7 @@ namespace Jackson_Kirkpatrick_Project2 {
         private bool saved = false;
         //name of current opened file 
         private string currFile = string.Empty;
+        //initalize the openfile and savefile dialogs, also create dictionary that contains the fontstyles of bold italic and underline so that we can enable text to be all 3 a once 
         private OpenFileDialog ofd = new OpenFileDialog();
         private SaveFileDialog sfd = new SaveFileDialog();
         private Dictionary<FontStyle, bool> styleEnabled = new Dictionary<FontStyle, bool> {
@@ -40,6 +41,7 @@ namespace Jackson_Kirkpatrick_Project2 {
         };
 
         private void MyTimerTick(object sender, EventArgs e) {
+            //this timer serves as a state save, all text that is added within the timer iteration will be added to the undoredo stack
             timer.Stop();
             editOperation.AddUndoRedo(textBody.Text);
             UpdateView();
@@ -87,15 +89,16 @@ namespace Jackson_Kirkpatrick_Project2 {
         }
 
         private void saveAsToolStripMenuItem1_Click(object sender, EventArgs e) {
+            //upon saving the current unnamed file, it takes the first 4 words in the textbox, similar to what word does when it takes the first few words as the document title
             if(currFile == "")
-                //sfd.FileName = "Untitled.txt";
-                sfd.FileName = string.Join("_", textBody.Text.Split().Take(4));
+                sfd.FileName = string.Join(" ", textBody.Text.Split().Take(4));
             
             //this should only show txt, pdf, and dox files. 
             //will auto prompt to save as a txt files
             sfd.Filter = "Text Files (*.txt)|*.txt|PDF Files (*.pdf)|*.pdf|Word Documents (*.docx)|*.docx|All Files (*.*)|*.*";
             sfd.FilterIndex = 1;
 
+            //sees if the file has extension of txt and sets the title of the form to the current file and then appends Word's Sequel to the end of it, again cause I like how it looks
             if (DialogResult.OK == sfd.ShowDialog()) {
                 if(Path.GetExtension(sfd.FileName)== ".txt")
                     textBody.SaveFile(sfd.FileName, RichTextBoxStreamType.PlainText);
@@ -105,50 +108,43 @@ namespace Jackson_Kirkpatrick_Project2 {
         }
 
         private void exitToolStripMenuItem1_Click(object sender, EventArgs e) {
+            //pretty self explanitory. closes the form/application 
             this.Close();
         }
 
         private void Form1_FormClosing_1(object sender, FormClosingEventArgs e) {
+            //checks to see if the file or changes made to the file werew saved, if not then give the user a warning that changes were not saved
             if (!saved) {
-                if (MessageBox.Show("Some changes were not saved. Are you sure you want to exit?", "Warning", MessageBoxButtons.OKCancel) == DialogResult.Cancel)
-                    e.Cancel = true;
+                if (MessageBox.Show("Some changes were not saved. Are you sure you want to exit?", "Warning", MessageBoxButtons.OKCancel) == DialogResult.Cancel){e.Cancel = true;}
             }
         }
 
-        private void Form1_Load(object sender, EventArgs e) {
-            this.WindowState = FormWindowState.Maximized;
-        }
+        //this just maximizes the form upon start up. i like this better
+        private void Form1_Load(object sender, EventArgs e) {this.WindowState = FormWindowState.Maximized;}
 
-        private void boldBtn_Click(object sender, EventArgs e) {
-            changeFont(FontStyle.Bold);
-        }
+        //sets either selected text font or the future text font to bold
+        private void boldBtn_Click(object sender, EventArgs e) {changeFont(FontStyle.Bold);}
+        //sets either selected text font or the future text font to italic 
+        private void italicBtn_Click(object sender, EventArgs e) {changeFont(FontStyle.Italic);}
+        //sets either selected text font or the future text font to underline
+        private void underlineBtn_Click(object sender, EventArgs e) {changeFont(FontStyle.Underline);}
+        //increase either selected test size or future text size by 1
+        private void increaseSizeBtn_Click(object sender, EventArgs e) {changeFontSize(1.0f);}
+        //decrease either selected test size or future text size by 1
+        private void decreseSizeBtn_Click(object sender, EventArgs e) {changeFontSize(-1.0f);}
 
-        private void italicBtn_Click(object sender, EventArgs e) {
-            changeFont(FontStyle.Italic);
-        }
-
-        private void underlineBtn_Click(object sender, EventArgs e) {
-            changeFont(FontStyle.Underline);
-        }
-
-        private void increaseSizeBtn_Click(object sender, EventArgs e) {
-            changeFontSize(1.0f);
-        }
-
-        private void decreseSizeBtn_Click(object sender, EventArgs e) {
-            changeFontSize(-1.0f);
-        }
-
-
+        //actually changes the font style, allows for text to have multipel different font styles. ex both bold and italic, italic and bold, bold and underline, bold italic and underline, etc.
         private void changeFont(FontStyle fontStyle) {
             styleEnabled[fontStyle] = !styleEnabled[fontStyle];
             Font currfont = textBody.SelectionFont;
-            if (styleEnabled[fontStyle]) 
-                textBody.SelectionFont = new Font(currfont, currfont.Style | fontStyle);
-            else
-                textBody.SelectionFont = new Font(currfont, currfont.Style & ~fontStyle);
+            //utilize bitwise operators to turn onn or off bits for font style
+            if (styleEnabled[fontStyle]){textBody.SelectionFont = new Font(currfont, currfont.Style | fontStyle); }
+            else{textBody.SelectionFont = new Font(currfont, currfont.Style & ~fontStyle); }
         }
+
+        //actually changes font size. i have it add the val to the current font size and simply have the decrease size event use a negative value to decrease the font size. so i dont have two make 2 functions when i can just do 1
         private void changeFontSize(float val) {
+            //makes sure that the selectionfont exists. and if the newsize if smaller than 12, then set minimum to 12
             if(textBody.SelectionFont != null) {
                 float newSize = textBody.SelectionFont.Size + val;
                 if(newSize <= 12){
@@ -176,8 +172,8 @@ namespace Jackson_Kirkpatrick_Project2 {
             try{
                 textBody.Text = editOperation.UndoClicked();
                 UpdateView();
-            }catch(Exception ex) {
-                MessageBox.Show($"Nothing to undo. Type something in and then you can undo.{ex}", "Warning", MessageBoxButtons.OK);
+            }catch(Exception) {
+                textBody.Text = "";
             }
         }
 
@@ -196,6 +192,33 @@ namespace Jackson_Kirkpatrick_Project2 {
         private void UpdateView() {
             undoToolStripMenuItem.Enabled = editOperation.CanUndo() ? true : false;
             redoToolStripMenuItem.Enabled = editOperation.CanRedo() ? true : false;
+        }
+
+        private void copyToolStripMenuItem_Click(object sender, EventArgs e) {
+            if(!string.IsNullOrEmpty(textBody.Text)){Clipboard.SetText(textBody.Text); }
+        }
+
+        private void pasteToolStripMenuItem_Click(object sender, EventArgs e) {
+            //checks to 
+            if(Clipboard.ContainsText()){
+                int selStart = textBody.SelectionStart;
+                int selLength = textBody.SelectionLength;
+
+                if(selLength > 0){textBody.Text += Clipboard.GetText(TextDataFormat.Text).ToString();}
+                textBody.Text = textBody.Text.Insert(selStart, Clipboard.GetText(TextDataFormat.Text).ToString());
+                textBody.SelectionStart = selStart + Clipboard.GetText(TextDataFormat.Text).Length;
+                textBody.SelectionLength = 0;
+            }
+        }
+
+    
+
+        private void cutToolStripMenuItem_Click(object sender, EventArgs e) {
+
+        }
+
+        private void selectAllToolStripMenuItem_Click(object sender, EventArgs e) {
+
         }
     }
 }
