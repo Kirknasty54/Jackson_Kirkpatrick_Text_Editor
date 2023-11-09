@@ -23,14 +23,14 @@ namespace Jackson_Kirkpatrick_Project2 {
         }
 
         public string Redo() {
-            if(redoStack.Count == 0) return undoStack.First().ToString();
+            if(redoStack.Count == 0) {return undoStack.First().ToString();}
             string item = redoStack.Pop();
             undoStack.Push(item);
             return undoStack.First();
         }
 
-        public bool CanUndo() {return  undoStack.Count > 0;}
-        public bool CanRedo() {return redoStack.Count > 0;}
+        public bool CanUndo() {return  undoStack.Count != 0 | undoStack.Count > 0;}
+        public bool CanRedo() {return redoStack.Count > 0 | redoStack.Count != 0;}
 
         public List<string> UndoItems() {return undoStack.ToList();}
 

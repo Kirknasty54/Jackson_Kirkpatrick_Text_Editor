@@ -12,6 +12,8 @@ using System.Diagnostics.Eventing.Reader;
 
 namespace Jackson_Kirkpatrick_Project2 {
     public partial class Form1 : Form {
+        EditOperation editOperation;
+        Timer timer;
         public Form1() {
             InitializeComponent();
             
@@ -19,6 +21,10 @@ namespace Jackson_Kirkpatrick_Project2 {
             string[] fontNames = System.Drawing.FontFamily.Families.Select(family => family.Name).ToArray(); 
             currFontText.Items.AddRange(fontNames);
             currFontText.Text = textBody.SelectionFont.Name;
+            editOperation = new EditOperation();
+            timer = new Timer();
+            timer.Tick+=MyTimerTick;
+            timer.Interval = 10;
         }
 
         //if the current file is save
@@ -27,12 +33,17 @@ namespace Jackson_Kirkpatrick_Project2 {
         private string currFile = string.Empty;
         private OpenFileDialog ofd = new OpenFileDialog();
         private SaveFileDialog sfd = new SaveFileDialog();
-        private UndoRedo unreStack = new UndoRedo();
         private Dictionary<FontStyle, bool> styleEnabled = new Dictionary<FontStyle, bool> {
             {FontStyle.Bold, false},
             {FontStyle.Italic, false},
             {FontStyle.Underline, false}
         };
+
+        private void MyTimerTick(object sender, EventArgs e) {
+            timer.Stop();
+            editOperation.AddUndoRedo(textBody.Text);
+            UpdateView();
+        }
 
         private void newToolStripMenuItem1_Click(object sender, EventArgs e) {
             //if the textbody has text entered ask user if okay with losing contents since they will be opening a new file 
@@ -77,9 +88,11 @@ namespace Jackson_Kirkpatrick_Project2 {
 
         private void saveAsToolStripMenuItem1_Click(object sender, EventArgs e) {
             if(currFile == "")
-                sfd.FileName = "Untitled.txt";
+                //sfd.FileName = "Untitled.txt";
+                sfd.FileName = string.Join("_", textBody.Text.Split().Take(4));
             
-
+            //this should only show txt, pdf, and dox files. 
+            //will auto prompt to save as a txt files
             sfd.Filter = "Text Files (*.txt)|*.txt|PDF Files (*.pdf)|*.pdf|Word Documents (*.docx)|*.docx|All Files (*.*)|*.*";
             sfd.FilterIndex = 1;
 
@@ -143,7 +156,7 @@ namespace Jackson_Kirkpatrick_Project2 {
                     newSize = 12.0f;
                 }else if(newSize >= 100) {
                     MessageBox.Show("Maximum font size is 100.\nAny larger and this program will literally implode.\nAnd federal agents will be sent to your house.", "Warning", MessageBoxButtons.OK);
-                    newSize = 12.0f;
+                    newSize = 100.0f;
 
                 }
                 textBody.SelectionFont = new Font(textBody.SelectionFont.FontFamily, newSize, textBody.SelectionFont.Style);
@@ -159,34 +172,30 @@ namespace Jackson_Kirkpatrick_Project2 {
             textBody.Select(selStart, selLength);
         }
 
-        private void textBody_TextChanged(object sender, EventArgs e) {
-            string[] textBodyArray = textBody.Text.Split(' ');
-            foreach(string word in textBodyArray) {
-                unreStack.AddItem(word);
+        private void undoToolStripMenuItem_Click(object sender, EventArgs e) {
+            try{
+                textBody.Text = editOperation.UndoClicked();
+                UpdateView();
+            }catch(Exception ex) {
+                MessageBox.Show($"Nothing to undo. Type something in and then you can undo.{ex}", "Warning", MessageBoxButtons.OK);
             }
         }
 
-        private void textBody_KeyDown(object sender, KeyEventArgs e) {
-            if (e.Control && e.KeyCode == Keys.Z) {
-                e.SuppressKeyPress = true;
-                if(unreStack.CanUndo()){
-                    int selStart = textBody.SelectionStart;
-                    textBody.Text = unreStack.Undo();
-                    textBody.SelectionStart = Math.Min(selStart, textBody.Text.Length);
-                }
-            }else if(e.Control && e.KeyCode == Keys.Y) {
-                e.SuppressKeyPress = true;
-                if(unreStack.CanRedo()){
-                    int selStart = textBody.SelectionStart;
-                    textBody.Text = unreStack.Redo();
-                    textBody.SelectionStart = Math.Min(selStart, textBody.Text.Length);
-                }
-            }
-            else {
-                string[] currText = textBody.Text.Split(' ');
-                textBody.Redo();
-                foreach(string word in currText){unreStack.AddItem(word);}
-            }
+                //if (MessageBox.Show("Some changes were not saved. Are you sure you want to exit?", "Warning", MessageBoxButtons.OKCancel) == DialogResult.Cancel)
+        private void redoToolStripMenuItem_Click(object sender, EventArgs e) {
+            textBody.Text = editOperation.RedoClicked();
+            UpdateView();
+        }
+
+        private void textBody_TextChanged(object sender, EventArgs e) {
+            if(editOperation.TextAreaTextChangeRequired) {timer.Start();}
+            else {editOperation.TextAreaTextChangeRequired = false;}
+            UpdateView();
+        }
+
+        private void UpdateView() {
+            undoToolStripMenuItem.Enabled = editOperation.CanUndo() ? true : false;
+            redoToolStripMenuItem.Enabled = editOperation.CanRedo() ? true : false;
         }
     }
 }

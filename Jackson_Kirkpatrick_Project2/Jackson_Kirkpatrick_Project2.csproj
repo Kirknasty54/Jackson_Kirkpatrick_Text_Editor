@@ -52,6 +52,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="EditOperation.cs" />
     <Compile Include="UndoRedo.cs" />
     <Compile Include="Word%27s Sequel.cs">
       <SubType>Form</SubType>
