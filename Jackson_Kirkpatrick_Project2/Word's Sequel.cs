@@ -195,7 +195,11 @@ namespace Jackson_Kirkpatrick_Project2 {
         }
 
         private void copyToolStripMenuItem_Click(object sender, EventArgs e) {
-            if(!string.IsNullOrEmpty(textBody.Text)){Clipboard.SetText(textBody.Text); }
+            if(!string.IsNullOrEmpty(textBody.Text)){
+                int selStart = textBody.SelectionStart;
+                int selLength = textBody.SelectionLength;
+                if(selLength > 0){Clipboard.SetText(textBody.Text.Substring(selStart, selLength));}
+            }
         }
 
         private void pasteToolStripMenuItem_Click(object sender, EventArgs e) {
@@ -211,13 +215,25 @@ namespace Jackson_Kirkpatrick_Project2 {
             }
         }
 
-    
-
         private void cutToolStripMenuItem_Click(object sender, EventArgs e) {
-
+            if(textBody.SelectionLength > 0) {
+                int selStart = textBody.SelectionStart;
+                int selLength = textBody.SelectionLength;
+                Clipboard.SetText(textBody.SelectedText);
+                textBody.Text = textBody.Text.Remove(selStart, selLength);
+                textBody.SelectionStart = selStart + Clipboard.GetText(TextDataFormat.Text).Length;
+                textBody.SelectionLength = 0;
+            }
         }
 
         private void selectAllToolStripMenuItem_Click(object sender, EventArgs e) {
+            if(textBody.Text.Length > 0) {
+                textBody.SelectionStart = 0 ;
+                textBody.SelectionLength = textBody.Text.Length;
+            }
+        }
+
+        private void searchToolStripMenuItem_Click(object sender, EventArgs e) {
 
         }
     }
